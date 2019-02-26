@@ -1,14 +1,12 @@
 import argparse
+import sys
 from lsb_encoder import LSBEncoder
 from lsb_decoder import LSBDecoder
 
 
 class Main:
-    def __init__(self):
-        self.parser = self.create_parser().parse_args()
-
     @staticmethod
-    def create_parser():
+    def parse_args(args):
         parser = argparse.ArgumentParser(description='LSB')
         parser.add_argument('-en', '--encode', action='store_true',
                             help='if you want to put information into WAV.')
@@ -19,22 +17,23 @@ class Main:
                                  'you want to inscribe.', nargs='*')
         parser.add_argument('-w', '--wav', default='', type=str,
                             help='Enter the path to the WAV-file', nargs='*')
-        return parser
+        return parser.parse_args(args)
 
     def main(self):
-        if self.parser.encode and self.parser.decode:
+        parser = self.parse_args(sys.argv[1:])
+        if parser.encode and parser.decode:
             raise Exception("This keys shouldn't be used at the same time")
-        if self.parser.encode:
-            files = self.parser.file
-            wav_path = ' '.join(self.parser.wav)
+        if parser.encode:
+            files = parser.file
+            wav_path = ' '.join(parser.wav)
             if len(files) == 0 or len(wav_path) == 0:
                 raise Exception('Not all arguments are specified. Try again!')
             lsb = LSBEncoder(files, wav_path)
             lsb.inscribe()
             lsb.create_new_wav()
             return
-        if self.parser.decode:
-            wav_path = ' '.join(self.parser.wav)
+        if parser.decode:
+            wav_path = ' '.join(parser.wav)
             if len(wav_path) == 0:
                 raise Exception('Not all arguments are specified. Try again!')
             lsb = LSBDecoder(wav_path)

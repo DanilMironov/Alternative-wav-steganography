@@ -57,7 +57,8 @@ class LSBDecoder:
     @staticmethod
     def _compare_the_checksum(actual_sum, rec_sum):
         if actual_sum != rec_sum:
-            raise Exception('There was a distortion of information')
+            raise Exception('There was a distortion of information.({}!={})'
+                            .format(actual_sum, rec_sum))
 
     def get_hidden_information(self):
         offset = bytes_per_sample = self.bits_per_sample // 8
