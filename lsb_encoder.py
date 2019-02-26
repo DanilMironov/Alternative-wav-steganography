@@ -1,12 +1,15 @@
 import re
 import pickle
 from lsb_stuff import LSBStuff as Stuff
+from rle_encoder import RLEEncoder
 
 
 class LSBEncoder:
     def __init__(self, path_to_file_to_insert: list,
                  path_to_main_file: str,
+                 need_compression=False,
                  index_of_start_of_data=None):
+        self._need_compression = need_compression
         self.inserted_files = path_to_file_to_insert
         self.pickled_files = self._create_pickle()
         self.main_file = Stuff.read_the_file(path_to_main_file)
@@ -25,7 +28,8 @@ class LSBEncoder:
         record_unit = 1
         free_bytes_count = len(self.main_file) - self.index_of_start_of_data
         cells_to_write_count = (free_bytes_count * 8) // self.bits_per_sample
-        necessary_count_of_cells = (len(self.pickled_files) * 8) // record_unit + 64
+        necessary_count_of_cells = \
+            (len(self.pickled_files) * 8)//record_unit + 64
         return cells_to_write_count >= necessary_count_of_cells
 
     def _create_pickle(self):
@@ -33,7 +37,12 @@ class LSBEncoder:
         for element in self.inserted_files:
             data = Stuff.read_the_file(element)
             dict_of_files[element] = data
-        return bytearray(pickle.dumps(dict_of_files))
+        result = bytearray(pickle.dumps(dict_of_files))
+        if not self._need_compression:
+            return result
+        else:
+            rle = RLEEncoder(result)
+            return rle.encode()
 
     @staticmethod
     def _define_filename_in_bytearray(path: str):
@@ -74,7 +83,9 @@ class LSBEncoder:
                                     index, offset):
         for i in range(bytes_to_describe):
             current_byte = self.main_file[index: index + 1]
-            new_byte = self._create_new_byte_of_flag(current_byte, description, i)
+            new_byte = self._create_new_byte_of_flag(current_byte,
+                                                     description,
+                                                     i)
             self.main_file[index] = new_byte
             index += offset
         return index
@@ -93,20 +104,23 @@ class LSBEncoder:
         bytes_to_describe_length_of_data = 32
         bits_to_write = Stuff.get_bin_str_from_bytearray(self.pickled_files)
         list_of_pairs_to_write = list(bits_to_write)
-        length_description = self._create_description(list_of_pairs_to_write,
-                                                      bytes_to_describe_length_of_data)
+        length_description = self._create_description(
+            list_of_pairs_to_write,
+            bytes_to_describe_length_of_data)
         bytes_to_describe_length_of_hash = 8
         current_hash = Stuff.get_hash(self.pickled_files)
         bits_of_hash = Stuff.get_bin_from_int(current_hash)
         hash_pairs = list(bits_of_hash)
-        hash_description = self._create_description(hash_pairs,
-                                                    bytes_to_describe_length_of_hash)
-        index = self.describe_flag_and_get_index(bytes_to_describe_length_of_data,
-                                                 length_description,
-                                                 index, offset)
-        index = self.describe_flag_and_get_index(bytes_to_describe_length_of_hash,
-                                                 hash_description,
-                                                 index, offset)
+        hash_description = self._create_description(
+            hash_pairs,
+            bytes_to_describe_length_of_hash)
+        index = self.describe_flag_and_get_index(
+            bytes_to_describe_length_of_data,
+            length_description,
+            index, offset)
+        index = self.describe_flag_and_get_index(
+            bytes_to_describe_length_of_hash,
+            hash_description, index, offset)
         index = self.describe_data_and_get_index(hash_pairs, index, offset)
         self.describe_data_and_get_index(list_of_pairs_to_write,
                                          index, offset)

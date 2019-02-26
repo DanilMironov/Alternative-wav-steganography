@@ -1,9 +1,12 @@
 import pickle
 from lsb_stuff import LSBStuff as Stuff
+from rle_decoder import RLEDecoder
 
 
 class LSBDecoder:
-    def __init__(self, path_to_the_file, index_of_start_of_data=None):
+    def __init__(self, path_to_the_file, index_of_start_of_data=None,
+                 need_decompression=False):
+        self._need_decompression = need_decompression
         self.main_file = Stuff.read_the_file(path_to_the_file)
         if index_of_start_of_data is None:
             self.index_of_start_of_data = \
@@ -22,7 +25,8 @@ class LSBDecoder:
         description = ''
         for i in range(bytes_to_describe):
             current_byte = self.main_file[index: index + 1]
-            bin_repr_current_byte = Stuff.get_bin_str_from_bytearray(current_byte)
+            bin_repr_current_byte = \
+                Stuff.get_bin_str_from_bytearray(current_byte)
             list_of_current_chars = list(bin_repr_current_byte)
             description += list_of_current_chars[-1]
             index += offset
@@ -33,11 +37,13 @@ class LSBDecoder:
         buffer_index = 0
         for i in range(length):
             current_byte = self.main_file[index: index + 1]
-            bin_repr_current_byte = Stuff.get_bin_str_from_bytearray(current_byte)
+            bin_repr_current_byte = \
+                Stuff.get_bin_str_from_bytearray(current_byte)
             current_pairs = list(bin_repr_current_byte)
             string_repr += current_pairs[-1]
             if len(string_repr) == 8:
-                buffer[buffer_index] = Stuff.get_int_from_bin(string_repr)
+                buffer[buffer_index] = \
+                    Stuff.get_int_from_bin(string_repr)
                 string_repr = ''
                 buffer_index += 1
             index += offset
@@ -47,7 +53,8 @@ class LSBDecoder:
         hash_str = ''
         for i in range(length_of_hash):
             current_byte = self.main_file[index: index + 1]
-            bin_repr_current_byte = Stuff.get_bin_str_from_bytearray(current_byte)
+            bin_repr_current_byte = \
+                Stuff.get_bin_str_from_bytearray(current_byte)
             current_pairs = list(bin_repr_current_byte)
             hash_str += current_pairs[-1]
             index += offset
@@ -80,14 +87,19 @@ class LSBDecoder:
         length_of_hash = Stuff.get_int_from_bin(length_of_hash_description)
         index, rec_hash = self._read_the_hash(length_of_hash, index, offset)
         content_of_recieved = bytearray(length_of_new_bytearray)
-        index += self._read_the_content(content_of_recieved, length, index, offset)
+        index += self._read_the_content(content_of_recieved,
+                                        length, index, offset)
         actual_hash = Stuff.get_hash(content_of_recieved)
         self._compare_the_checksum(actual_hash, rec_hash)
         self.create_files(content_of_recieved)
 
-    @staticmethod
-    def create_files(content_of_recieved):
-        recieved_dict = pickle.loads(content_of_recieved)
+    def create_files(self, content_of_recieved):
+        if not self._need_decompression:
+            recieved_dict = pickle.loads(content_of_recieved)
+        else:
+            decoder = RLEDecoder(content_of_recieved)
+            decomp_content = decoder.decode()
+            recieved_dict = pickle.loads(decomp_content)
         for element in recieved_dict:
             with open('(recieved) ' + element, 'wb') as file:
                 file.write(recieved_dict[element])

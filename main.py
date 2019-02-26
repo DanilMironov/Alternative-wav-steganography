@@ -9,14 +9,19 @@ class Main:
     def parse_args(args):
         parser = argparse.ArgumentParser(description='LSB')
         parser.add_argument('-en', '--encode', action='store_true',
-                            help='if you want to put information into WAV.')
+                            help='If you want to put information into WAV.')
         parser.add_argument('-dec', '--decode', action='store_true',
-                            help='if you want to pull out information from WAV.')
+                            help='If you want to pull out '
+                                 'the information from WAV.')
         parser.add_argument('-f', '--file', default='', type=str,
                             help='Enter the path to the file'
                                  'you want to inscribe.', nargs='*')
         parser.add_argument('-w', '--wav', default='', type=str,
                             help='Enter the path to the WAV-file', nargs='*')
+        parser.add_argument('-cmp', '--compression', action='store_true',
+                            help='If you want to apply compression')
+        parser.add_argument('-dcmp', '--decompression', action='store_true',
+                            help='If you want to apply decompression')
         return parser.parse_args(args)
 
     def main(self):
